@@ -1,0 +1,36 @@
+{
+  "name": "automation",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Automatically create pull request and tag",
+  "keyword": [
+    "actions",
+    "gitflow"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/boostbrothers/automation.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "ncc build index.js",
+    "lint": "eslint index.js"
+  },
+  "author": "boostbrothers",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.2.4",
+    "@actions/github": "^3.0.0"
+  },
+  "devDependencies": {
+    "@zeit/ncc": "^0.22.3",
+    "eslint": "^7.2.0",
+    "eslint-config-airbnb": "^18.1.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-import": "^2.21.2",
+    "eslint-plugin-jsx-a11y": "^6.2.3",
+    "eslint-plugin-prettier": "^3.1.4",
+    "eslint-plugin-react": "^7.20.0",
+    "prettier": "^2.0.5"
+  }
+}

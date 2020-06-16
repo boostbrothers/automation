@@ -1,0 +1,32 @@
+name: Git Flow Automation
+description: Git Flow Automation
+author: boostbrothers
+inputs:
+  GITHUB_TOKEN:
+    description: Github Token
+    required: true
+  BOT_TOKEN:
+    description: Automation Bot PAT
+    required: true
+  MASTER_BRANCH:
+    description: master branch name
+    required: false
+    default: master
+  DEVELOP_BRANCH:
+    description: develop branch name
+    required: false
+    default: develop
+  RELEASE_BRANCH_PREFIX:
+    description: release branch prefix
+    required: false
+    default: release/
+  HOTFIX_BRANCH_PREFIX:
+    description: hotfix branch prefix
+    required: false
+    default: hotfix/
+runs:
+  using: node12
+  main: dist/index.js
+branding:
+  icon: check-circle
+  color: blue
