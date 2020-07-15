@@ -402,14 +402,13 @@ const { context, getOctokit } = __webpack_require__(469);
 
 const token = core.getInput('GITHUB_TOKEN', { required: true });
 const botToken = core.getInput('BOT_TOKEN');
-const masterBranch = core.getInput('MASTER_BRANCH') || 'master';
-const developBranch = core.getInput('DEVELOP_BRANCH') || 'develop';
-const releaseBranch = core.getInput('RELEASE_BRANCH_PREFIX') || 'release/';
-const hotfixBranch = core.getInput('HOTFIX_BRANCH_PREFIX') || 'hotfix/';
-
-const { owner, repo } = context.repo;
+const masterBranch = core.getInput('MASTER_BRANCH');
+const developBranch = core.getInput('DEVELOP_BRANCH');
+const releaseBranch = core.getInput('RELEASE_BRANCH_PREFIX');
+const hotfixBranch = core.getInput('HOTFIX_BRANCH_PREFIX');
 const githubBot = getOctokit(token);
 const automationBot = getOctokit(botToken);
+const { owner, repo } = context.repo;
 
 const getTarget = (branch) => {
   if (branch.startsWith(releaseBranch)) {
@@ -476,9 +475,7 @@ const createTag = async (commitSha, version) => {
   });
 };
 
-const run = async () => {
-  core.debug(JSON.stringify(context.payload));
-
+const actionPullRequest = async () => {
   if (!context.payload.pull_request.merged) {
     core.info('pull request is not merged. Skpping...');
     return;
@@ -499,6 +496,36 @@ const run = async () => {
 
   const mergeCommitSha = context.payload.pull_request.merge_commit_sha;
   await createTag(mergeCommitSha, version);
+};
+
+const actionPush = async () => {
+  const branchName = context.payload.ref.replace('refs/heads/', '');
+  if (!branchName) {
+    throw new Error(`Can't parsing '${context.payload.ref}'`);
+  }
+
+  if (!branchName.startsWith(releaseBranch) && !branchName.startsWith(hotfixBranch)) {
+    throw new Error('This branch do not have prefix');
+  }
+
+  const version = getVersion(branchName);
+  const pr = await createPullRequest(branchName, 'master', version);
+  await approvePullRequest(pr.data.number);
+};
+
+const run = async () => {
+  core.debug(JSON.stringify(context.payload));
+
+  switch (context.eventName) {
+    case 'push':
+      await actionPush();
+      break;
+    case 'pull_request':
+      await actionPullRequest();
+      break;
+    default:
+      core.info('Skipping...');
+  };
 
   core.debug(JSON.stringify(context.payload));
 };
