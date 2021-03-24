@@ -1,6 +1,6 @@
 {
   "name": "automation",
-  "version": "0.0.3-test.1",
+  "version": "0.0.3",
   "private": true,
   "description": "Automatically create pull request and tag",
   "keyword": [
