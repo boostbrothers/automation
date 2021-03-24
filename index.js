@@ -1,6 +1,7 @@
 const core = require('@actions/core');
 const { context, getOctokit } = require('@actions/github');
 const conventionalChangelog = require('conventional-changelog'); 
+const changelogConfig = require('conventional-changelog-conventionalcommits');
 
 const token = core.getInput('GITHUB_TOKEN', { required: true });
 const botToken = core.getInput('BOT_TOKEN');
@@ -62,23 +63,22 @@ const approvePullRequest = async (prNumber) => {
 const createReleaseMessage = async () => {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    const stream = conventionalChangelog({
-      preset: {
-        name: require.resolve('conventional-changelog-conventionalcommits'),
-        types: [
-          { type: 'feat', section: ':star: Features' },
-          { type: 'fix', section: ':beetle: Bug Fixes' },
-          { type: 'revert', section: ':fire: Reverts' },
-          { type: 'docs', section: ':book: Documentation' },
-          { type: 'style', section: ':milky_way: Styles' },
-          { type: 'chore', section: ':sparkles: Miscellaneous Chores' },
-          { type: 'refactor', section: ':rainbow: Code Refactoring' },
-          { type: 'test', section: ':zap: Tests' },
-          { type: 'build', section: 'Build System', hidden: true },
-          { type: 'ci', section: 'Continuous Integration', hidden: true },
-        ],
-      },
+    const config = changelogConfig({
+      types: [
+        { type: 'feat', section: ':star: Features' },
+        { type: 'fix', section: ':beetle: Bug Fixes' },
+        { type: 'revert', section: ':fire: Reverts' },
+        { type: 'docs', section: ':book: Documentation' },
+        { type: 'style', section: ':milky_way: Styles' },
+        { type: 'chore', section: ':sparkles: Miscellaneous Chores' },
+        { type: 'refactor', section: ':rainbow: Code Refactoring' },
+        { type: 'test', section: ':zap: Tests' },
+        { type: 'build', section: 'Build System', hidden: true },
+        { type: 'ci', section: 'Continuous Integration', hidden: true },
+      ],
     });
+
+    const stream = conventionalChangelog({ config });
 
     stream.on('data', (chunk) => {
       chunks.push(chunk);

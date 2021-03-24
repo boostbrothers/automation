@@ -3847,7 +3847,51 @@ module.exports = basePropertyOf;
 
 /***/ }),
 /* 99 */,
-/* 100 */,
+/* 100 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+
+const Q = __webpack_require__(885)
+const _ = __webpack_require__(557)
+const conventionalChangelog = __webpack_require__(193)
+const parserOpts = __webpack_require__(239)
+const recommendedBumpOpts = __webpack_require__(995)
+const writerOpts = __webpack_require__(579)
+
+module.exports = function (parameter) {
+  // parameter passed can be either a config object or a callback function
+  if (_.isFunction(parameter)) {
+    // parameter is a callback object
+    const config = {}
+    // FIXME: use presetOpts(config) for callback
+    Q.all([
+      conventionalChangelog(config),
+      parserOpts(config),
+      recommendedBumpOpts(config),
+      writerOpts(config)
+    ]).spread((conventionalChangelog, parserOpts, recommendedBumpOpts, writerOpts) => {
+      parameter(null, { gitRawCommitsOpts: { noMerges: null }, conventionalChangelog, parserOpts, recommendedBumpOpts, writerOpts })
+    })
+  } else {
+    const config = parameter || {}
+    return presetOpts(config)
+  }
+}
+
+function presetOpts (config) {
+  return Q.all([
+    conventionalChangelog(config),
+    parserOpts(config),
+    recommendedBumpOpts(config),
+    writerOpts(config)
+  ]).spread((conventionalChangelog, parserOpts, recommendedBumpOpts, writerOpts) => {
+    return { conventionalChangelog, parserOpts, recommendedBumpOpts, writerOpts }
+  })
+}
+
+
+/***/ }),
 /* 101 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -4009,6 +4053,7 @@ module.exports = {"repositories":"'repositories' (plural) Not supported. Please 
 const core = __webpack_require__(470);
 const { context, getOctokit } = __webpack_require__(469);
 const conventionalChangelog = __webpack_require__(486); 
+const changelogConfig = __webpack_require__(100);
 
 const token = core.getInput('GITHUB_TOKEN', { required: true });
 const botToken = core.getInput('BOT_TOKEN');
@@ -4070,23 +4115,22 @@ const approvePullRequest = async (prNumber) => {
 const createReleaseMessage = async () => {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    const stream = conventionalChangelog({
-      preset: {
-        name: __webpack_require__.ab + "index1.js",
-        types: [
-          { type: 'feat', section: ':star: Features' },
-          { type: 'fix', section: ':beetle: Bug Fixes' },
-          { type: 'revert', section: ':fire: Reverts' },
-          { type: 'docs', section: ':book: Documentation' },
-          { type: 'style', section: ':milky_way: Styles' },
-          { type: 'chore', section: ':sparkles: Miscellaneous Chores' },
-          { type: 'refactor', section: ':rainbow: Code Refactoring' },
-          { type: 'test', section: ':zap: Tests' },
-          { type: 'build', section: 'Build System', hidden: true },
-          { type: 'ci', section: 'Continuous Integration', hidden: true },
-        ],
-      },
+    const config = changelogConfig({
+      types: [
+        { type: 'feat', section: ':star: Features' },
+        { type: 'fix', section: ':beetle: Bug Fixes' },
+        { type: 'revert', section: ':fire: Reverts' },
+        { type: 'docs', section: ':book: Documentation' },
+        { type: 'style', section: ':milky_way: Styles' },
+        { type: 'chore', section: ':sparkles: Miscellaneous Chores' },
+        { type: 'refactor', section: ':rainbow: Code Refactoring' },
+        { type: 'test', section: ':zap: Tests' },
+        { type: 'build', section: 'Build System', hidden: true },
+        { type: 'ci', section: 'Continuous Integration', hidden: true },
+      ],
     });
+
+    const stream = conventionalChangelog({ config });
 
     stream.on('data', (chunk) => {
       chunks.push(chunk);
@@ -5886,10 +5930,10 @@ function conventionalChangelogWriterInit (context, options) {
     includeDetails: false,
     ignoreReverted: true,
     doFlush: true,
-    mainTemplate: readFileSync(__webpack_require__.ab + "template.hbs", 'utf-8'),
-    headerPartial: readFileSync(__webpack_require__.ab + "header.hbs", 'utf-8'),
-    commitPartial: readFileSync(__webpack_require__.ab + "commit.hbs", 'utf-8'),
-    footerPartial: readFileSync(__webpack_require__.ab + "footer.hbs", 'utf-8')
+    mainTemplate: readFileSync(__webpack_require__.ab + "template1.hbs", 'utf-8'),
+    headerPartial: readFileSync(__webpack_require__.ab + "header1.hbs", 'utf-8'),
+    commitPartial: readFileSync(__webpack_require__.ab + "commit1.hbs", 'utf-8'),
+    footerPartial: readFileSync(__webpack_require__.ab + "footer1.hbs", 'utf-8')
   }, options)
 
   if ((!_.isFunction(options.transform) && _.isObject(options.transform)) || _.isUndefined(options.transform)) {
@@ -7380,7 +7424,25 @@ function parseGitUrl (giturl) {
 /***/ }),
 /* 191 */,
 /* 192 */,
-/* 193 */,
+/* 193 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+
+
+const Q = __webpack_require__(885)
+const parserOpts = __webpack_require__(239)
+const writerOpts = __webpack_require__(579)
+
+module.exports = function (config) {
+  return Q.all([parserOpts(config), writerOpts(config)])
+    .spread((parserOpts, writerOpts) => {
+      return { parserOpts, writerOpts }
+    })
+}
+
+
+/***/ }),
 /* 194 */,
 /* 195 */,
 /* 196 */,
@@ -9403,7 +9465,38 @@ function pipeline() {
 module.exports = pipeline;
 
 /***/ }),
-/* 239 */,
+/* 239 */
+/***/ (function(module) {
+
+"use strict";
+
+
+module.exports = function (config) {
+  config = defaultConfig(config)
+  return {
+    headerPattern: /^(\w*)(?:\((.*)\))?!?: (.*)$/,
+    breakingHeaderPattern: /^(\w*)(?:\((.*)\))?!: (.*)$/,
+    headerCorrespondence: [
+      'type',
+      'scope',
+      'subject'
+    ],
+    noteKeywords: ['BREAKING CHANGE'],
+    revertPattern: /^(?:Revert|revert:)\s"?([\s\S]+?)"?\s*This reverts commit (\w*)\./i,
+    revertCorrespondence: ['header', 'hash'],
+    issuePrefixes: config.issuePrefixes
+  }
+}
+
+// merge user set configuration with default configuration.
+function defaultConfig (config) {
+  config = config || {}
+  config.issuePrefixes = config.issuePrefixes || ['#']
+  return config
+}
+
+
+/***/ }),
 /* 240 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -46387,7 +46480,219 @@ module.exports = function(argument) {
 
 /***/ }),
 /* 578 */,
-/* 579 */,
+/* 579 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+
+
+const addBangNotes = __webpack_require__(964)
+const compareFunc = __webpack_require__(739)
+const Q = __webpack_require__(885)
+const readFile = Q.denodeify(__webpack_require__(747).readFile)
+const resolve = __webpack_require__(622).resolve
+
+/**
+ * Handlebar partials for various property substitutions based on commit context.
+ */
+const owner = '{{#if this.owner}}{{~this.owner}}{{else}}{{~@root.owner}}{{/if}}'
+const host = '{{~@root.host}}'
+const repository = '{{#if this.repository}}{{~this.repository}}{{else}}{{~@root.repository}}{{/if}}'
+
+module.exports = function (config) {
+  config = defaultConfig(config)
+  const commitUrlFormat = expandTemplate(config.commitUrlFormat, {
+    host,
+    owner,
+    repository
+  })
+  const compareUrlFormat = expandTemplate(config.compareUrlFormat, {
+    host,
+    owner,
+    repository
+  })
+  const issueUrlFormat = expandTemplate(config.issueUrlFormat, {
+    host,
+    owner,
+    repository,
+    id: '{{this.issue}}',
+    prefix: '{{this.prefix}}'
+  })
+
+  return Q.all([
+    readFile(__webpack_require__.ab + "template.hbs", 'utf-8'),
+    readFile(__webpack_require__.ab + "header.hbs", 'utf-8'),
+    readFile(__webpack_require__.ab + "commit.hbs", 'utf-8'),
+    readFile(__webpack_require__.ab + "footer.hbs", 'utf-8')
+  ])
+    .spread((template, header, commit, footer) => {
+      const writerOpts = getWriterOpts(config)
+
+      writerOpts.mainTemplate = template
+      writerOpts.headerPartial = header
+        .replace(/{{compareUrlFormat}}/g, compareUrlFormat)
+      writerOpts.commitPartial = commit
+        .replace(/{{commitUrlFormat}}/g, commitUrlFormat)
+        .replace(/{{issueUrlFormat}}/g, issueUrlFormat)
+      writerOpts.footerPartial = footer
+
+      return writerOpts
+    })
+}
+
+function findTypeEntry (types, commit) {
+  const typeKey = (commit.revert ? 'revert' : (commit.type || '')).toLowerCase()
+  return types.find((entry) => {
+    if (entry.type !== typeKey) {
+      return false
+    }
+    if (entry.scope && entry.scope !== commit.scope) {
+      return false
+    }
+    return true
+  })
+}
+
+function getWriterOpts (config) {
+  config = defaultConfig(config)
+
+  return {
+    transform: (commit, context) => {
+      let discard = true
+      const issues = []
+      const entry = findTypeEntry(config.types, commit)
+
+      // adds additional breaking change notes
+      // for the special case, test(system)!: hello world, where there is
+      // a '!' but no 'BREAKING CHANGE' in body:
+      addBangNotes(commit)
+
+      commit.notes.forEach(note => {
+        note.title = 'BREAKING CHANGES'
+        discard = false
+      })
+
+      // breaking changes attached to any type are still displayed.
+      if (discard && (entry === undefined ||
+          entry.hidden)) return
+
+      if (entry) commit.type = entry.section
+
+      if (commit.scope === '*') {
+        commit.scope = ''
+      }
+
+      if (typeof commit.hash === 'string') {
+        commit.shortHash = commit.hash.substring(0, 7)
+      }
+
+      if (typeof commit.subject === 'string') {
+        // Issue URLs.
+        config.issuePrefixes.join('|')
+        const issueRegEx = '(' + config.issuePrefixes.join('|') + ')' + '([0-9]+)'
+        const re = new RegExp(issueRegEx, 'g')
+
+        commit.subject = commit.subject.replace(re, (_, prefix, issue) => {
+          issues.push(prefix + issue)
+          const url = expandTemplate(config.issueUrlFormat, {
+            host: context.host,
+            owner: context.owner,
+            repository: context.repository,
+            id: issue,
+            prefix: prefix
+          })
+          return `[${prefix}${issue}](${url})`
+        })
+        // User URLs.
+        commit.subject = commit.subject.replace(/\B@([a-z0-9](?:-?[a-z0-9/]){0,38})/g, (_, user) => {
+          // TODO: investigate why this code exists.
+          if (user.includes('/')) {
+            return `@${user}`
+          }
+
+          const usernameUrl = expandTemplate(config.userUrlFormat, {
+            host: context.host,
+            owner: context.owner,
+            repository: context.repository,
+            user: user
+          })
+
+          return `[@${user}](${usernameUrl})`
+        })
+      }
+
+      // remove references that already appear in the subject
+      commit.references = commit.references.filter(reference => {
+        if (issues.indexOf(reference.prefix + reference.issue) === -1) {
+          return true
+        }
+
+        return false
+      })
+
+      return commit
+    },
+    groupBy: 'type',
+    // the groupings of commit messages, e.g., Features vs., Bug Fixes, are
+    // sorted based on their probable importance:
+    commitGroupsSort: (a, b) => {
+      const commitGroupOrder = ['Reverts', 'Performance Improvements', 'Bug Fixes', 'Features']
+      const gRankA = commitGroupOrder.indexOf(a.title)
+      const gRankB = commitGroupOrder.indexOf(b.title)
+      if (gRankA >= gRankB) {
+        return -1
+      } else {
+        return 1
+      }
+    },
+    commitsSort: ['scope', 'subject'],
+    noteGroupsSort: 'title',
+    notesSort: compareFunc
+  }
+}
+
+// merge user set configuration with default configuration.
+function defaultConfig (config) {
+  config = config || {}
+  config.types = config.types || [
+    { type: 'feat', section: 'Features' },
+    { type: 'feature', section: 'Features' },
+    { type: 'fix', section: 'Bug Fixes' },
+    { type: 'perf', section: 'Performance Improvements' },
+    { type: 'revert', section: 'Reverts' },
+    { type: 'docs', section: 'Documentation', hidden: true },
+    { type: 'style', section: 'Styles', hidden: true },
+    { type: 'chore', section: 'Miscellaneous Chores', hidden: true },
+    { type: 'refactor', section: 'Code Refactoring', hidden: true },
+    { type: 'test', section: 'Tests', hidden: true },
+    { type: 'build', section: 'Build System', hidden: true },
+    { type: 'ci', section: 'Continuous Integration', hidden: true }
+  ]
+  config.issueUrlFormat = config.issueUrlFormat ||
+    '{{host}}/{{owner}}/{{repository}}/issues/{{id}}'
+  config.commitUrlFormat = config.commitUrlFormat ||
+    '{{host}}/{{owner}}/{{repository}}/commit/{{hash}}'
+  config.compareUrlFormat = config.compareUrlFormat ||
+    '{{host}}/{{owner}}/{{repository}}/compare/{{previousTag}}...{{currentTag}}'
+  config.userUrlFormat = config.userUrlFormat ||
+    '{{host}}/{{user}}'
+  config.issuePrefixes = config.issuePrefixes || ['#']
+
+  return config
+}
+
+// expand on the simple mustache-style templates supported in
+// configuration (we may eventually want to use handlebars for this).
+function expandTemplate (template, context) {
+  let expanded = template
+  Object.keys(context).forEach(key => {
+    expanded = expanded.replace(new RegExp(`{{${key}}}`, 'g'), context[key])
+  })
+  return expanded
+}
+
+
+/***/ }),
 /* 580 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -69916,7 +70221,23 @@ module.exports.shellSync = (cmd, opts) => handleShell(module.exports.sync, cmd, 
 /* 961 */,
 /* 962 */,
 /* 963 */,
-/* 964 */,
+/* 964 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const { breakingHeaderPattern } = __webpack_require__(239)()
+
+module.exports = (commit) => {
+  const match = commit.header.match(breakingHeaderPattern)
+  if (match && commit.notes.length === 0) {
+    const noteText = match[3] // the description of the change.
+    commit.notes.push({
+      text: noteText
+    })
+  }
+}
+
+
+/***/ }),
 /* 965 */,
 /* 966 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
@@ -71053,6 +71374,60 @@ function normalize (data, warn, strict) {
 
 function ucFirst (string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+
+/***/ }),
+/* 991 */,
+/* 992 */,
+/* 993 */,
+/* 994 */,
+/* 995 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+"use strict";
+
+
+const addBangNotes = __webpack_require__(964)
+const parserOpts = __webpack_require__(239)
+
+module.exports = function (config) {
+  return {
+    parserOpts: parserOpts(config),
+
+    whatBump: (commits) => {
+      let level = 2
+      let breakings = 0
+      let features = 0
+
+      commits.forEach(commit => {
+        // adds additional breaking change notes
+        // for the special case, test(system)!: hello world, where there is
+        // a '!' but no 'BREAKING CHANGE' in body:
+        addBangNotes(commit)
+        if (commit.notes.length > 0) {
+          breakings += commit.notes.length
+          level = 0
+        } else if (commit.type === 'feat' || commit.type === 'feature') {
+          features += 1
+          if (level === 2) {
+            level = 1
+          }
+        }
+      })
+
+      if (config.preMajor && level < 2) {
+        level++
+      }
+
+      return {
+        level: level,
+        reason: breakings === 1
+          ? `There is ${breakings} BREAKING CHANGE and ${features} features`
+          : `There are ${breakings} BREAKING CHANGES and ${features} features`
+      }
+    }
+  }
 }
 
 
