@@ -1,5 +1,6 @@
 const core = require('@actions/core');
 const { context, getOctokit } = require('@actions/github');
+const standardChangelog = require('standard-changelog');
 
 const token = core.getInput('GITHUB_TOKEN', { required: true });
 const botToken = core.getInput('BOT_TOKEN');
@@ -58,7 +59,25 @@ const approvePullRequest = async (prNumber) => {
   return resp;
 };
 
-const createTag = async (commitSha, version) => {
+const createReleaseMessage = async () => {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const stream = standardChangelog();
+    stream.on('data', (chunk) => {
+      chunks.push(chunk);
+    });
+
+    stream.on('end', () => {
+      resolve(Buffer.concat(chunks).toString('utf-8'));
+    });
+
+    stream.on('error', (error) => {
+      reject(error);
+    });
+  });
+};
+
+const createTag = async (commitSha, version, message) => {
   await automationBot.git.createTag({
     owner,
     repo,
@@ -73,6 +92,7 @@ const createTag = async (commitSha, version) => {
     repo,
     tag_name: version,
     name: version,
+    body: message,
   });
 };
 
@@ -91,12 +111,13 @@ const actionPullRequest = async () => {
   }
 
   const version = getVersion(head);
+  const message = await createReleaseMessage();
 
   const pr = await createPullRequest(head, target, version);
   await approvePullRequest(pr.data.number);
 
   const mergeCommitSha = context.payload.pull_request.merge_commit_sha;
-  await createTag(mergeCommitSha, version);
+  await createTag(mergeCommitSha, version, message);
 };
 
 const actionPush = async () => {
