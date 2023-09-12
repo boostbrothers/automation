@@ -4200,7 +4200,7 @@ const actionPush = async () => {
   }
 
   const version = getVersion(branchName);
-  const pr = await createPullRequest(branchName, 'master', version);
+  const pr = await createPullRequest(branchName, masterBranch, version);
   await approvePullRequest(pr.data.number);
 };
 
